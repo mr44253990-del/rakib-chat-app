@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Internet & Network -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <!-- Notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Storage -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!-- Audio -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Camera -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Wake Lock for FCM -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Vibrator -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".EBChatApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.EBChat"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="34">
+
+        <!-- Splash Activity - Launcher -->
+        <activity
+            android:name=".splash.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.EBChat.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Auth Activities -->
+        <activity
+            android:name=".auth.LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".auth.SignupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".home.MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar"
+            android:windowSoftInputMode="adjustPan" />
+
+        <!-- Chat Activity -->
+        <activity
+            android:name=".chat.ChatActivity"
+            android:exported="false"
+            android:parentActivityName=".home.MainActivity"
+            android:theme="@style/Theme.EBChat.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Group Chat Activity -->
+        <activity
+            android:name=".chat.GroupChatActivity"
+            android:exported="false"
+            android:parentActivityName=".home.MainActivity"
+            android:theme="@style/Theme.EBChat.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Search Activity -->
+        <activity
+            android:name=".search.SearchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar" />
+
+        <!-- Profile Activity -->
+        <activity
+            android:name=".profile.ProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar" />
+
+        <!-- Story Viewer Activity -->
+        <activity
+            android:name=".story.StoryViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.FullScreen" />
+
+        <!-- Create Story Activity -->
+        <activity
+            android:name=".story.CreateStoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar" />
+
+        <!-- S+ Permission Screen -->
+        <activity
+            android:name=".auth.PermissionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EBChat.NoActionBar" />
+
+        <!-- Firebase Messaging Service -->
+        <service
+            android:name=".notification.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Firebase Installations Receiver -->
+        <receiver
+            android:name="com.google.firebase.iid.FirebaseInstanceIdReceiver"
+            android:exported="true"
+            android:permission="com.google.android.c2dm.permission.SEND">
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification Channel Metadata -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/pink_primary" />
+
+    </application>
+</manifest>

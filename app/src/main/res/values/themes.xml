@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base Theme -->
+    <style name="Theme.EBChat" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/pink_primary</item>
+        <item name="colorPrimaryDark">@color/pink_primary_dark</item>
+        <item name="colorAccent">@color/pink_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@drawable/bg_gradient</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="materialButtonStyle">@style/PinkButton</item>
+        <item name="textInputStyle">@style/GlassInput</item>
+    </style>
+
+    <!-- No ActionBar variant -->
+    <style name="Theme.EBChat.NoActionBar" parent="Theme.EBChat" />
+
+    <!-- Splash Theme -->
+    <style name="Theme.EBChat.Splash" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_splash</item>
+        <item name="android:statusBarColor">@color/bg_gradient_start</item>
+        <item name="android:navigationBarColor">@color/bg_gradient_end</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Full Screen Theme -->
+    <style name="Theme.EBChat.FullScreen" parent="Theme.EBChat">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <!-- Pink Button Style -->
+    <style name="PinkButton" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/bg_button_pink</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="cornerRadius">25dp</item>
+        <item name="rippleColor">@color/pink_light</item>
+    </style>
+
+    <!-- Glass Input Style -->
+    <style name="GlassInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/bg_input</item>
+        <item name="boxStrokeColor">@color/pink_primary</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextColor">@color/text_hint</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="endIconTint">@color/pink_primary</item>
+        <item name="startIconTint">@color/pink_primary</item>
+    </style>
+
+    <!-- Glass Card Style -->
+    <style name="GlassCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/glass_white</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- Online Indicator Style -->
+    <style name="OnlineIndicator">
+        <item name="android:layout_width">12dp</item>
+        <item name="android:layout_height">12dp</item>
+        <item name="android:background">@drawable/bg_online_indicator</item>
+    </style>
+
+    <!-- Custom Animations -->
+    <style name="ActivitySlide" parent="android:Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/slide_out_left</item>
+        <item name="android:activityCloseEnterAnimation">@anim/slide_in_left</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
+    </style>
+</resources>
