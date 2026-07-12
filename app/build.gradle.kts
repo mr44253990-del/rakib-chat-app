@@ -48,6 +48,12 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("androidx.browser:browser:1.8.0")
+    }
+}
+
 dependencies {
     // AndroidX Core
     implementation("androidx.core:core-ktx:1.12.0")
