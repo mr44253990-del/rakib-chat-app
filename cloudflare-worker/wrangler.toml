@@ -1,0 +1,14 @@
+name = "eb-chat-fcm-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Environment Variables
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+# Secrets - এগুলো Cloudflare Dashboard থেকে set করতে হবে
+# wrangler secret put FIREBASE_SERVICE_ACCOUNT --env production
+# wrangler secret put FIREBASE_SERVICE_ACCOUNT --env development
