@@ -1,9 +1,7 @@
 /**
- * Cloudflare Worker - Firebase Push Notification Service
- * Handles real-time notifications for EB Chat Application
+ * Cloudflare Worker - Firebase Cloud Messaging Push Notification Service
+ * For EB Chat Application - Real-time Notifications
  */
-
-import admin from 'firebase-admin';
 
 export default {
   async fetch(request, env, ctx) {
@@ -26,22 +24,11 @@ export default {
     const pathname = url.pathname;
 
     try {
+      console.log(`[${new Date().toISOString()}] Incoming request: ${request.method} ${pathname}`);
+
       // Route: POST /send-notification
       if (pathname === '/send-notification' && request.method === 'POST') {
         return await handleSendNotification(request, env, corsHeaders);
-      }
-
-      // Route: POST /subscribe
-      if (pathname === '/subscribe' && request.method === 'POST') {
-        return await handleSubscribe(request, env, corsHeaders);
-      }
-
-      // Route: GET /health
-      if (pathname === '/health' && request.method === 'GET') {
-        return new Response(JSON.stringify({ status: 'OK', timestamp: new Date().toISOString() }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
       }
 
       // Route: POST /send-multi-notification
@@ -49,9 +36,32 @@ export default {
         return await handleMultiNotification(request, env, corsHeaders);
       }
 
+      // Route: GET /health
+      if (pathname === '/health' && request.method === 'GET') {
+        return new Response(
+          JSON.stringify({
+            status: 'OK',
+            service: 'EB Chat - Firebase Push Notification Service',
+            timestamp: new Date().toISOString(),
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          }
+        );
+      }
+
       // 404
       return new Response(
-        JSON.stringify({ error: 'Endpoint not found', path: pathname }),
+        JSON.stringify({
+          error: 'Endpoint not found',
+          path: pathname,
+          availableEndpoints: [
+            'POST /send-notification',
+            'POST /send-multi-notification',
+            'GET /health',
+          ],
+        }),
         {
           status: 404,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -75,27 +85,66 @@ export default {
 };
 
 /**
- * Initialize Firebase Admin SDK
+ * Get Firebase Access Token using Service Account
  */
-function initializeFirebase(env) {
-  const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+async function getFirebaseAccessToken(env) {
+  try {
+    const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id,
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT',
+      kid: serviceAccount.private_key_id,
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iss: serviceAccount.client_email,
+      sub: serviceAccount.client_email,
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+      scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    };
+
+    const headerEncoded = base64url(JSON.stringify(header));
+    const payloadEncoded = base64url(JSON.stringify(payload));
+    const signature = await signJWT(
+      `${headerEncoded}.${payloadEncoded}`,
+      serviceAccount.private_key
+    );
+
+    const jwt = `${headerEncoded}.${payloadEncoded}.${signature}`;
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt,
+      }).toString(),
     });
-  }
 
-  return admin;
+    if (!tokenResponse.ok) {
+      throw new Error(`Token request failed: ${tokenResponse.statusText}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    return tokenData.access_token;
+  } catch (error) {
+    console.error('Error getting Firebase access token:', error);
+    throw error;
+  }
 }
 
 /**
- * Handle sending notification to single device
+ * Send notification to single device
  */
 async function handleSendNotification(request, env, corsHeaders) {
   try {
-    const { token, title, body, data, badge, sound, priority } = await request.json();
+    const { token, title, body, data, sound = 'default', priority = 'high' } = await request.json();
 
     // Validation
     if (!token) {
@@ -112,58 +161,68 @@ async function handleSendNotification(request, env, corsHeaders) {
       );
     }
 
-    const firebaseAdmin = initializeFirebase(env);
-    const messaging = firebaseAdmin.messaging();
+    const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+    const projectId = serviceAccount.project_id;
+    const accessToken = await getFirebaseAccessToken(env);
 
     const message = {
-      token: token,
-      notification: {
-        title: title,
-        body: body,
-      },
-      android: {
-        priority: priority || 'high',
-        notification: {
-          sound: sound || 'default',
-          channelId: 'default_notification_channel',
-          clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-          icon: 'ic_notification',
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            alert: {
-              title: title,
-              body: body,
-            },
-            sound: sound || 'default',
-            badge: badge || 1,
-          },
-        },
-      },
-      webpush: {
+      message: {
+        token: token,
         notification: {
           title: title,
           body: body,
-          icon: '/logo-192x192.png',
-          badge: '/badge-72x72.png',
+        },
+        data: data || {},
+        android: {
+          priority: priority,
+          notification: {
+            sound: sound,
+            channel_id: 'default_notification_channel',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            icon: 'ic_notification',
+            color: '#FF6B9D',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              alert: {
+                title: title,
+                body: body,
+              },
+              sound: sound,
+              badge: 1,
+              'mutable-content': 1,
+            },
+          },
         },
       },
     };
 
-    // Add custom data if provided
-    if (data && typeof data === 'object') {
-      message.data = data;
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(message),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`FCM Error: ${JSON.stringify(error)}`);
     }
 
-    const response = await messaging.send(message);
+    const result = await response.json();
 
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Notification sent successfully',
-        messageId: response,
+        messageId: result.name,
         timestamp: new Date().toISOString(),
       }),
       {
@@ -177,7 +236,7 @@ async function handleSendNotification(request, env, corsHeaders) {
       JSON.stringify({
         error: 'Failed to send notification',
         message: error.message,
-        details: error.code || 'UNKNOWN',
+        timestamp: new Date().toISOString(),
       }),
       {
         status: 500,
@@ -188,11 +247,11 @@ async function handleSendNotification(request, env, corsHeaders) {
 }
 
 /**
- * Handle sending notifications to multiple devices
+ * Send notifications to multiple devices
  */
 async function handleMultiNotification(request, env, corsHeaders) {
   try {
-    const { tokens, title, body, data, priority } = await request.json();
+    const { tokens, title, body, data, priority = 'high' } = await request.json();
 
     if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
       return new Response(
@@ -208,53 +267,83 @@ async function handleMultiNotification(request, env, corsHeaders) {
       );
     }
 
-    const firebaseAdmin = initializeFirebase(env);
-    const messaging = firebaseAdmin.messaging();
+    const results = {
+      successful: [],
+      failed: [],
+      total: tokens.length,
+    };
 
-    const message = {
-      notification: {
-        title: title,
-        body: body,
-      },
-      android: {
-        priority: priority || 'high',
-        notification: {
-          sound: 'default',
-          channelId: 'default_notification_channel',
-          clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-          icon: 'ic_notification',
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            alert: {
+    // Send to each token
+    for (const token of tokens) {
+      try {
+        const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+        const projectId = serviceAccount.project_id;
+        const accessToken = await getFirebaseAccessToken(env);
+
+        const message = {
+          message: {
+            token: token,
+            notification: {
               title: title,
               body: body,
             },
-            sound: 'default',
-            badge: 1,
+            data: data || {},
+            android: {
+              priority: priority,
+              notification: {
+                sound: 'default',
+                channel_id: 'default_notification_channel',
+                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                icon: 'ic_notification',
+                color: '#FF6B9D',
+              },
+            },
           },
-        },
-      },
-    };
+        };
 
-    if (data && typeof data === 'object') {
-      message.data = data;
+        const response = await fetch(
+          `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(message),
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          results.successful.push({
+            token: token,
+            messageId: result.name,
+          });
+        } else {
+          const error = await response.json();
+          results.failed.push({
+            token: token,
+            error: error.error?.message || 'Unknown error',
+          });
+        }
+      } catch (error) {
+        results.failed.push({
+          token: token,
+          error: error.message,
+        });
+      }
     }
-
-    // Send to all tokens
-    const response = await messaging.sendMulticast(message, tokens);
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: results.failed.length === 0,
         message: 'Multicast notification processed',
-        successCount: response.successCount,
-        failureCount: response.failureCount,
-        failures: response.responses
-          .map((resp, idx) => (!resp.success ? { token: tokens[idx], error: resp.error.message } : null))
-          .filter(Boolean),
+        results: {
+          total: results.total,
+          successful: results.successful.length,
+          failed: results.failed.length,
+          details: results,
+        },
         timestamp: new Date().toISOString(),
       }),
       {
@@ -268,6 +357,7 @@ async function handleMultiNotification(request, env, corsHeaders) {
       JSON.stringify({
         error: 'Failed to send multicast notification',
         message: error.message,
+        timestamp: new Date().toISOString(),
       }),
       {
         status: 500,
@@ -278,47 +368,43 @@ async function handleMultiNotification(request, env, corsHeaders) {
 }
 
 /**
- * Handle FCM token subscription (for database storage)
+ * Helper: Base64 URL encode
  */
-async function handleSubscribe(request, env, corsHeaders) {
-  try {
-    const { userId, token, deviceName } = await request.json();
+function base64url(str) {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
-    if (!userId || !token) {
-      return new Response(
-        JSON.stringify({ error: 'userId and token are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
+/**
+ * Helper: Sign JWT with private key
+ */
+async function signJWT(message, privateKey) {
+  const keyData = privateKey
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\n/g, '');
 
-    // You can store this in a database or KV store
-    // For now, we'll just validate the token
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Token subscription recorded',
-        data: {
-          userId,
-          token,
-          deviceName,
-          timestamp: new Date().toISOString(),
-        },
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: 'Failed to subscribe',
-        message: error.message,
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      }
-    );
+  const binaryString = atob(keyData);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
   }
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    bytes.buffer,
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(message)
+  );
+
+  return base64url(String.fromCharCode(...new Uint8Array(signature)));
 }
