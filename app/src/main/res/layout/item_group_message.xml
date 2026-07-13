@@ -23,7 +23,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@drawable/bg_chat_receiver"
-        android:padding="12dp 16dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
         android:layout_marginStart="8dp"
         android:maxWidth="280dp">
 

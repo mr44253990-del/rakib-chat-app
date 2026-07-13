@@ -33,7 +33,8 @@
             android:hint="@string/search_hint"
             android:textColorHint="@color/text_hint"
             android:textColor="@color/text_primary"
-            android:padding="12dp 16dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
             android:textSize="15sp"
             android:inputType="text"
             android:imeOptions="actionSearch" />
